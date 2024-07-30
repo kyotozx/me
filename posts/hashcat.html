@@ -4,19 +4,211 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>papers - kyotozx</title>
-    <link rel="stylesheet" href="../styles.css">
+    <style>
+
+body {
+    background-color: #111;
+    color: #eee;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    text-align: justify;
+}
+
+header {
+    background-color: #000;
+    padding: 1em;
+    text-align: center;
+    border-bottom: 1px solid #444;
+}
+
+nav a {
+    color: #BDBDBD;
+    margin: 0 1em;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+main {
+    padding: 2em;
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: justify;
+    line-height: 1.6;
+}
+
+h1 {
+    color: #BDBDBD;
+    text-align: center;
+    margin-bottom: 1em;
+}
+
+p {
+    margin-bottom: 1em;
+    text-align: justify;
+}
+
+pre {
+    background-color: #222;
+    padding: 1em;
+    border-radius: 5px;
+    overflow-x: auto;
+    text-align: center;
+}
+
+a {
+    color: #919191;
+    text-decoration: underline;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+table {
+    margin: 20px auto;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #444;
+}
+
+caption {
+    caption-side: top;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #BDBDBD;
+}
+
+img {
+    display: block;
+    margin: 20px auto;
+    border-radius: 10px;
+}
+
+    </style>
 </head>
 <body>
     <header>
         <nav>
-            <a href="../index.html">home</a>
-            <a href="../posts.html">posts</a>
+            <a href="../index.html">Home</a>
+            <a href="../posts.html">Posts</a>
         </nav>
     </header>
     <main>
-        <h1>introduction to hashcat and dictionary attack</h1>
-        <p>A hash is a mathematical function that takes varied data and returns a fixed number of characters. Today I'll explain one of the basic atacks usinh hashcat: The Dictionary Attack.</p>
-        <img src="https://hashcat.net/s/i/hashcat-icon.png" width="200">
-        <p> All of this definitions and terms may seem confusing, so let's give an example:</p>
-        <p>Consider a store where customers register via a login form. The server stores the login data in the database. In a potential database attack scenario, which of the following seems safest?</p>
-        
+        <h1>Introduction to Hashcat and Dictionary Attack</h1>
+        <p>"A hash is a mathematical function that takes varied data and returns a fixed number of characters."</p>
+        <p>Confusing? No problem! Today I'll explain what a hash is and one of the basic attacks using Hashcat: The Dictionary Attack.</p>
+        <img src="https://hashcat.net/s/i/hashcat-icon.png" width="200" alt="Hashcat Icon">
+        <p>All of these definitions and terms may seem confusing, so let's give an example:</p>
+        <p>Consider an online store where customers register via a login form using a username and password. The server stores the login data in the database. In a potential database attack scenario, which of the following seems safest?</p>
+
+        <table>
+            <caption>Example 1</caption>
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Password</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Maria</td>
+                    <td>maria123</td>
+                </tr>
+                <tr>
+                    <td>Carlos</td>
+                    <td>senha445</td>
+                </tr>
+                <tr>
+                    <td>Beatriz</td>
+                    <td>@beatriz</td>
+                </tr>
+                <tr>
+                    <td>Diego</td>
+                    <td>D1ego</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <br>
+
+        <table>
+            <caption>Example 2</caption>
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Password</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Maria</td>
+                    <td>f8461b554d59b3014e8ff5165dc62fac</td>
+                </tr>
+                <tr>
+                    <td>Carlos</td>
+                    <td>25ef5594f4ce4c623b83e161d8f2123a</td>
+                </tr>
+                <tr>
+                    <td>Beatriz</td>
+                    <td>c30cd26bdb8d5978a92465c64a14a135</td>
+                </tr>
+                <tr>
+                    <td>Diego</td>
+                    <td>7026df07286e6ba0a6acb4489582b478</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>‎ </p>
+        <p>‎ </p>
+        <p>Clearly, the second example is the safest, don't you think?</p>
+        <p>But what happened to the passwords? What are these numbers and letters? Simple! They are the users' passwords in hashes (in this case, MD5 hashes)</p>
+        <p>The correct way is to transform all user credentials into hashes to be stored on the server, instead of plain text.</p>
+        <p>When we log in by entering our credentials in a login form, the server transforms our input into the type of hash it uses and compares whether there is a hash that it matches in the database.</p>
+        <p>Ok... So what do we do with the hashes? Hackers from the good side say they are not reversible.</p>
+        <p>Well, that's true. They are not reversible. But it would be very boring if that was all, right? That's where Hashcat comes in.</p>
+
+        <p>There is only one way to "reverse" the hashes back to plain text, and that's using Brute-Force. In other words, you will use a wordlist containing the passwords you want to test. (Remember that Maria's password in MD5 hash (f8461b554d59b3014e8ff5165dc62fac) will ALWAYS result in maria123)</p>
+        <p>And that's what Hashcat does! You pass a wordlist to it, and in seconds it returns the result.</p>
+
+        <p>Of course that Hashcat has many different functions, but today I will explain the most common attack type, the Dictionary Attack.</p>
+
+        <p>First of all, we need to identify a hash. We can do this via the terminal using:</p>
+        <pre>$ hashid 'hash'</pre>
+        <p>The result will be the possible hash types. If it returns several types, it is most likely the first one (if not, then test the second... third... fourth, and so on).</p>
+        <p>Sometimes it doesn't return any. Then you need to look manually. I recommend the Hashcat website itself (which I will mention again later): <a href="https://hashcat.net/wiki/doku.php?id=example_hashes">Hashcat website</a></p>
+
+        <p>Let's get to the most fun part, breaking hashes!</p>
+        <p>You can check the Hashcat manual using:</p>
+        <pre>$ man hashcat</pre>
+        <p>or</p>
+        <pre>$ hashcat --help</pre>
+        <p>I will explain the most basic commands.</p>
+
+        <p>Let's try to break Maria's password using Hashcat.</p>
+        <p>To use Dictionary Attack mode, we use the flag -a 0 (-a = attack type, in this case, Dictionary Attack (0)). You can check the number of each attack by looking at the manual.</p>
+        <p>To select the hash type to be tested, we use -m. In our case, -m 0 (0 = MD5). You can check all hash types at <a href="https://hashcat.net/wiki/doku.php?id=example_hashes">Hashcat website</a></p>
+        <p>And to use the wordlist, just place it at the end. In this case, we will use rockyou.txt</p>
+
+        <p>Our command line will look like this 👇</p>
+        <pre>$ hashcat -a 0 -m 0 f8461b554d59b3014e8ff5165dc62fac /usr/share/wordlists/rockyou.txt</pre>
+        <p>Now just run Hashcat, and in a few seconds, it will return the result.</p>
+        <p>If it says "cracked," it means it successfully broke the hash. If it says "exhausted," it tested all the words in the wordlist and couldn't find it.</p>
+        <img src="https://i.postimg.cc/cH68hdC5/Pasted-image-20240401225645.png" alt="Hashcat result">
+
+        <p>Success! Hash cracked in seconds.</p>
+
+        <p>Hashcat is a very complete tool, with various types of attacks for you to use. I tried to explain it in a simple way so everyone can understand how to use it.</p>
+    </main>
+</body>
+</html>
