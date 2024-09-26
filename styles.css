@@ -4,7 +4,6 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    text-align: justify;
 }
 
 header {
@@ -29,19 +28,25 @@ main {
     padding: 2em;
     max-width: 800px;
     margin: 0 auto;
-    text-align: center;
+    text-align: justify;
     line-height: 1.6;
 }
 
-h1 {
+h1{ 
     color: #BDBDBD;
+    text-align: center;
+    margin-bottom: 1em;
+}
+
+h2 {
+    color: #ffffff;
     text-align: center;
     margin-bottom: 1em;
 }
 
 p {
     margin-bottom: 1em;
-    text-align: center;
+    text-align: justify; 
 }
 
 pre {
@@ -49,7 +54,7 @@ pre {
     padding: 1em;
     border-radius: 5px;
     overflow-x: auto;
-    text-align: center;
+    text-align: left; 
 }
 
 a {
@@ -85,3 +90,19 @@ img {
     margin: 20px auto;
     border-radius: 10px;
 }
+
+.svelte-rviidv {
+    display: flex;               
+    justify-content: center;     
+    align-items: center;        
+    flex-direction: column;     
+    margin: 0 auto;            
+    max-width: 800px;          
+    padding: 20px;              
+}
+
+.post-list {
+    width: 100%;                
+    text-align: center;        
+}
+
