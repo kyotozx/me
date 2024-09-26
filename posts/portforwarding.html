@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>papers - kyotozx</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="../index.html">home</a>
+            <a href="../posts.html">posts</a>
+        </nav>
+    </header>
+    <main>
+        <h1>Dynamic Port Forwarding com SSH e SOCKS Tunneling</h1>
+        <h2>--- ( Introdução ) ---</h2>
+        <p>Com certeza você como pentester já chegou em uma situação onde você já comprometeu um host e não tem mais nada para fazer nele. No contexto de redes corporativas, a maioria dos hosts ficam inacessíveis para redes públicas, mas acessíveis dentro de sua própria rede. 
+        </p>
+        <p>Então como nós podemos continuar nossa exploração buscando por mais alvos? Simples! Através de movimento lateral, pivoting ou tunneling entre hosts. E é isso que eu vou explicar hoje :3</p>
+        <p>__________________________________________________________________________________________</p>
+        <h2>--- ( Sumário ) ---</h2>
+        <p>1 - Definições</p>
+        <p>‎ ‎ ‎ ‎ ‎ ‎  1.1 - Movimento lateral</p>
+        <p>‎ ‎ ‎ ‎ ‎ ‎  1.2 - Pivoting</p>
+        <p>‎ ‎ ‎ ‎ ‎ ‎  1.3 - Tunneling</p>
+        <p>2 - Introdução ao Port Forwarding</p>
+        <p>3 - Dynamic Port Forwarding com SSH e SOCKS Tunneling</p>
+        <p>‎ ‎ ‎ ‎ ‎ ‎  3.1 - Pivoting</p>
+        <p>4 - Referências</p>
+        <p>__________________________________________________________________________________________</p>
+        <h2>--- ( Definições ) ---</h2>
+        <h3>Movimento lateral:</h3>
+        <p>	- Refere-se ao processo pelo qual um atacante, após comprometer um ponto inicial dentro da rede (ex: uma máquina), se move para outras máquinas ou sistemas dentro do mesmo ambiente. Exemplo: Usar credenciais roubadas para 	acessar compartilhamentos de rede ou se conectar a outras máquinas via RDP (Remote Desktop Protocol) ou SMB (Server Message Block).</p>
+        <h3>Pivoting:</h3>
+        <p>	- É uma técnica usada para redirecionar o tráfego da rede através de um sistema comprometido para acessar outras partes da rede que normalmente não seriam acessíveis diretamente pelo atacante. Exemplo: Se um atacante compromete um servidor que possui acesso a uma sub-rede de uma organização, ele pode configurar o servidor comprometido para redirecionar seu tráfego (usando ferramentas como SSH tunneling ou proxychains) e acessar sistemas na sub-rede.</p>
+        <h3>Tunneling:</h3>
+        <p>- Envolve encapsular um protocolo de rede dentro de outro protocolo para evitar detecção ou contornar restrições de rede. Frequentemente usado para criar canais de comunicação seguros ou ocultos entre o atacante e os sistemas 	comprometidos. Exemplo: Encapsular tráfego SSH dentro de um protocolo HTTP ou HTTPS para atravessar firewalls que só permitem tráfego web.
+        </p>
+        <p>Resumindo, o Movimento Lateral nos ajuda a nos espalhar dentro de uma rede, elevando nossos privilégios, enquanto o Pivoting nos permite aprofundar as redes acessando ambientes antes inacessíveis.</p>
+        <p>Entendeu a diferença? Então vamos continuar :3c </p>
+        <p>Hoje eu irei dar uma breve introdução sobre port forwarding e te ensinar alguns métodos de ataque.</p>
+        <p>__________________________________________________________________________________________</p>
+        <h2>--- ( Introdução ao Port Forwarding ) ---</h2>
+        <p>O port forwarding é uma técnica que nos permite redirecionar uma solicitação de comunicação de uma porta para outra. Ele usa TCP como camada de comunicação primária para fornecer comunicação interativa para a porta encaminhada. No entanto, diferentes protocolos da camada de aplicação, como SSH ou mesmo SOCKS (que atua na camada de sessão), podem ser usados ​​para encapsular o tráfego encaminhado. Isso pode ser eficaz para contornar firewalls e usar serviços existentes no host comprometido para migrar para outras redes.</p>
+        <p>O port forwarding é essencial em situações onde dispositivos dentro de uma rede local (LAN) precisam ser acessados de fora (WAN), e o roteador atua como intermediário, encaminhando o tráfego de entrada para o dispositivo correto com base em regras definidas.</p>
+        <p>Ficou mais claro? Agora vamos partir para Dynamic Port Forwarding com SSH e SOCKS Tunneling.</p>
+        <p>__________________________________________________________________________________________</p>
+        <h2>--- ( Dynamic Port Forwarding com SSH e SOCKS Tunneling ) ---</h2>
+        <p>Nesse exemplo de port forwarding nós já temos as credenciais do servidor alvo.</p>
+        <p>Vamos usar a imagem de exemplo:</p>
+        <img src="https://i.postimg.cc/FHGFSpJH/Pasted-image-20240923132158.png" width="800">
+        <p>Nós temos um atacante (10.10.15.x) e um servidor alvo (10.129.x.x), que comprometemos. Vamos fazer um scan por portas abertas no servidor alvo usando o NMAP.
+        </p>
+        <pre>kyoto:~/ $ nmap -sT -p22,3306 10.129.202.64 
+
+            Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-09-23 15:59 EDT
+            Nmap scan report for 10.129.202.64
+            Host is up (0.15s latency).
+            
+            PORT     STATE  SERVICE
+            22/tcp   open   ssh
+            3306/tcp closed mysql
+            
+            Nmap done: 1 IP address (1 host up) scanned in 0.43 seconds
+            </pre>
+        <p>O NMAP nos mostrou que a porta SSH está aberta. Para acessar o MySQL, nós podemos acessar o servidor via SSH e acessar o MySQL por dentro ou podemos fazer um port forwading para nosso localhost na porta 1234 e acessar 	localmente. Um benefício de acessá-lo localmente é que por exemplo. se quisermos executar uma exploração remota no serviço MySQL, não poderíamos fazer sem o port forwading. Isso se deve ao fato do MySQL estar hospedado 	localmente no servidor  na porta 3306. Portanto, usaremos o comando abaixo para encaminhar nossa local port (1234) via SSH para o servidor:
+        </p>
+        <pre>kyoto:~/ $ ssh -L 1234:localhost:3306 ubuntu@10.129.202.64                                                                                                            
+            The authenticity of host '10.129.202.64 (10.129.202.64)' can't be established.
+            ED25519 key fingerprint is SHA256:AtNYHXCA7dVpi58LB+uuPe9xvc2lJwA6y7q82kZoBNM.
+            This key is not known by any other names.
+            Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+            Warning: Permanently added '10.129.202.64' (ED25519) to the list of known hosts.
+            ubuntu@10.129.202.64's password: 
+            Welcome to Ubuntu 20.04.3 LTS (GNU/Linux 5.4.0-91-generic x86_64)
+            
+             * Documentation:  https://help.ubuntu.com
+             * Management:     https://landscape.canonical.com
+             * Support:        https://ubuntu.com/advantage
+            
+              System information as of Mon 23 Sep 2024 08:03:20 PM UTC
+            
+              System load:             0.33
+              Usage of /:              30.4% of 13.72GB
+              Memory usage:            31%
+              Swap usage:              0%
+              Processes:               179
+              Users logged in:         0
+              IPv4 address for ens192: 10.129.202.64
+              IPv6 address for ens192: dead:beef::250:56ff:feb0:3417
+              IPv4 address for ens224: 172.16.5.129
+            
+             * Super-optimized for small spaces - read how we shrank the memory
+               footprint of MicroK8s to make it the smallest full K8s around.
+            
+               https://ubuntu.com/blog/microk8s-memory-optimisation
+            
+            147 updates can be applied immediately.
+            108 of these updates are standard security updates.
+            To see these additional updates run: apt list --upgradable
+            
+            
+            The list of available updates is more than a week old.
+            To check for new updates run: sudo apt update
+            
+            Last login: Thu May 12 17:27:41 2022
+            ubuntu@WEB01:~$ 
+            </pre>
+        <p>	A flag -L fala pro cliente SSH enviar uma request pro servidor SSH para dar forward em todos os pacotes que enviarmos via porta 1234 para a localhost:3306 no servidor. Fazendo isso, somos capazes de acessar o serviço MySQL 	localmente na porta 1234.</p>
+        <pre>kyoto:~/ $ netstat -antp | grep 1234                                               
+
+            (Not all processes could be identified, non-owned process info
+             will not be shown, you would have to be root to see it all.)
+            tcp        0      0 127.0.0.1:1234          0.0.0.0:*               LISTEN      7827/ssh            
+            tcp6       0      0 ::1:1234                :::*                    LISTEN      7827/ssh 
+            </pre>
+        <p>Confirmando se deu certo:</p>
+        <pre>kyoto:~/ $ nmap -v -sV -p1234 localhost                                                               
+            Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-09-23 16:07 EDT
+            NSE: Loaded 46 scripts for scanning.
+            Initiating Ping Scan at 16:07
+            Scanning localhost (127.0.0.1) [2 ports]
+            Completed Ping Scan at 16:07, 0.00s elapsed (1 total hosts)
+            Initiating Connect Scan at 16:07
+            Scanning localhost (127.0.0.1) [1 port]
+            Discovered open port 1234/tcp on 127.0.0.1
+            Completed Connect Scan at 16:07, 0.00s elapsed (1 total ports)
+            Initiating Service scan at 16:07
+            Scanning 1 service on localhost (127.0.0.1)
+            Completed Service scan at 16:07, 0.18s elapsed (1 service on 1 host)
+            NSE: Script scanning 127.0.0.1.
+            Initiating NSE at 16:07
+            Completed NSE at 16:07, 0.00s elapsed
+            Initiating NSE at 16:07
+            Completed NSE at 16:07, 0.00s elapsed
+            Nmap scan report for localhost (127.0.0.1)
+            Host is up (0.000058s latency).
+            Other addresses for localhost (not scanned): ::1
+            
+            PORT     STATE SERVICE VERSION
+            1234/tcp open  mysql   MySQL 8.0.28-0ubuntu0.20.04.3
+            
+            Read data files from: /usr/bin/../share/nmap
+            Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+            Nmap done: 1 IP address (1 host up) scanned in 0.66 seconds
+            </pre>
+        <p>Caso a gente queira fazer o port forwarding de muitas portas diferentes, é só incluir o mesmo comando que usamos para apenas uma porta. Exemplo: </p>
+        <pre>ssh -L 1234:localhost:3306 -L 8080:localhost:80 ubuntu@10.129.202.64</pre>
+        <p>Agora que o port forwarding está feito, podemos partir para o pivoting.
+        </p>
+        <p>Se a gente usar o comando ifconfig no alvo, veremos que o servidor tem múltiplos NICs:</p>
+        <pre>ubuntu@WEB01:~$ ifconfig
+            ens192: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+                    inet 10.129.202.64  netmask 255.255.0.0  broadcast 10.129.255.255
+                    inet6 dead:beef::250:56ff:feb0:3417  prefixlen 64  scopeid 0x0<global>
+                    inet6 fe80::250:56ff:feb0:3417  prefixlen 64  scopeid 0x20<link>
+                    ether 00:50:56:b0:34:17  txqueuelen 1000  (Ethernet)
+                    RX packets 1266  bytes 158162 (158.1 KB)
+                    RX errors 0  dropped 0  overruns 0  frame 0
+                    TX packets 720  bytes 58520 (58.5 KB)
+                    TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+            
+            ens224: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+                    inet 172.16.5.129  netmask 255.255.254.0  broadcast 172.16.5.255
+                    inet6 fe80::250:56ff:feb0:ed21  prefixlen 64  scopeid 0x20<link>
+                    ether 00:50:56:b0:ed:21  txqueuelen 1000  (Ethernet)
+                    RX packets 203  bytes 15632 (15.6 KB)
+                    RX errors 0  dropped 12  overruns 0  frame 0
+                    TX packets 179  bytes 12464 (12.4 KB)
+                    TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+            
+            lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+                    inet 127.0.0.1  netmask 255.0.0.0
+                    inet6 ::1  prefixlen 128  scopeid 0x10<host>
+                    loop  txqueuelen 1000  (Local Loopback)
+                    RX packets 1770  bytes 138998 (138.9 KB)
+                    RX errors 0  dropped 0  overruns 0  frame 0
+                    TX packets 1770  bytes 138998 (138.9 KB)
+                    TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+            </pre>
+        <p>__________________________________________________________________________________________</p>
+        <h2>--- ( Pivoting ) ---</h2>
+        <p>Ao contrário do cenário anterior, onde sabíamos qual porta acessar, no cenário atual não sabemos quais serviços estão do outro lado da rede. Portanto, podemos escanear intervalos menores de IPs na rede (172.16.5.1-200) ou o subnet inteiro (172.16.5.0/23). Não podemos realizar esse scan diretamente do nosso host local pois ele não possui rotas para a rede 172.16.5.0/23. Para fazer isso, precisamos realizar dynamic port forwarding e redirecionar nossos pacotes de rede através do servidor alvo. Podemos fazer isso iniciando um ouvinte SOCKS em nosso host local e, em seguida, configurar o SSH para encaminhar esse tráfego via SSH para a rede (172.16.5.0/23) após conectar-se ao host alvo.</p>
+        <p>	E isso é chamado de SSH tunneling sobre proxy SOCKS! </p>
+        <p>SOCKS significa Socket Secure, um protocolo que ajuda a se comunicar com servidores onde há restrições de firewall. Ao contrário da maioria dos casos, onde você iniciaria uma conexão para se conectar a um serviço, no caso do SOCKS, o tráfego inicial é gerado por um cliente SOCKS, que se conecta ao servidor SOCKS controlado pelo usuário que deseja acessar um serviço do lado do cliente. Uma vez estabelecida a conexão, o tráfego de rede pode ser roteado através do servidor SOCKS em nome do cliente conectado.
+        </p>
+        <p>Essa técnica é frequentemente usada para contornar as restrições impostas por firewalls e permitir que uma entidade externa acesse um serviço dentro do ambiente protegido pelo firewall. Um outro benefício do uso de proxy SOCKS para pivoting e encaminhamento de dados é que SOCKS proxies podem criar uma rota para um servidor externo a partir de redes NAT. Existem dois tipos de SOCKS proxies: SOCKS4 e SOCKS5. O SOCKS4 não fornece suporte a autenticação e UDP, enquanto o SOCKS5 fornece. 
+        </p>
+        <p>	Vamos pegar como exemplo a imagem abaixo, onde temos uma rede NAT de 172.16.5.0/23, que não podemos acessar diretamente.
+        </p>
+        <img src="https://i.postimg.cc/xdHHYB44/Pasted-image-20240923194329.png" width="800">
+        <p>Na imagem acima, o atacante inicia o cliente SSH e solicita ao servidor SSH permissão para enviar alguns dados TCP através do socket SSH. O servidor SSH responde com um reconhecimento, e o cliente SSH começa a escutar em localhost:9050. Qualquer dado que você enviar para esse endereço será retransmitido para toda a rede (172.16.5.0/23) via SSH. 
+        </p>
+        <p>	Podemos usar o comando abaixo para realizar esse dynamic port forwarding:
+        </p>
+        <pre>kyoto:~/ $ ssh -D 9050 ubuntu@10.129.202.64       </pre>
+        <p>A flag -D solicita ao servidor SSH que habilite o dynamic port forwarding. Uma vez que ele esteja ativado, precisaremos de uma ferramenta que possa redirecionar os pacotes de qualquer aplicação pela porta 9050. Podemos fazer isso usando a ferramenta proxychains, que é capaz de redirecionar conexões TCP através de proxies TOR, SOCKS e HTTP/HTTPS, e também permite encadear múltiplos servidores proxy juntos. Usando o proxychains, podemos ocultar o endereço IP do host solicitante, já que o host de destino verá apenas o IP do host de pivoteamento. 
+        </p>
+        <p>Para informar ao proxychains que devemos usar a porta 9050, precisamos modificar o arquivo de configuração localizado em /etc/proxychains.conf. Adicione socks4 127.0.0.1 9050 no final do arquivo, caso ela ainda não esteja presente.
+        </p>
+        <p>Agora, quando você usar NMAP com o proxychains usando o comando abaixo, ele irá redirecionar todos os pacotes do NMAP para a porta local 9050, onde nosso cliente SSH está escutando, encaminhando todos os pacotes via SSH para a rede 172.16.5.0/23.
+        </p>
+        <p>	Com isso nós podemos enumerar a rede:
+        </p>
+        <pre>"kyoto:~/ $ proxychains nmap -v -sn 172.16.5.1-200                                                       
+            [proxychains] config file found: /etc/proxychains4.conf
+            [proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
+            [proxychains] DLL init: proxychains-ng 4.17
+            Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-09-23 19:17 EDT
+            Initiating Ping Scan at 19:17
+            Scanning 200 hosts [2 ports/host]
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  127.0.0.1:9050 <--socket error or timeout!
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.2:80 <--socket error or timeout!
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.5:80 <--socket error or timeout!
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.6:80 <--socket error or timeout!
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.9:80 
+            
+            <...></pre>
+        <p>Essa parte de empacotar todos os dados do Nmap usando proxychains e encaminhá-los para um servidor remoto é chamada de SOCKS tunneling. Um ponto importante a ser lembrado é que só podemos realizar um full TCP connect scan com proxychains. O motivo para isso é que o proxychains não consegue entender pacotes parciais. Se você enviar pacotes parciais, como em half connect scans, ele retornará resultados incorretos. Também precisamos estar cientes de que as verificações de host-alive podem não funcionar contra alvos Windows, pois o firewall do Windows Defender bloqueia solicitações ICMP (pings tradicionais) por padrão.
+        </p>
+        <p>Um full TCP connect scan sem ping em um intervalo de rede inteiro pode demorar bastante. Portanto, nesse exemplo vou focar principalmente em escanear hosts individuais ou pequenos intervalos de hosts que sabemos estarem ativos, como um host Windows em 172.16.5.19.
+        </p>
+        <pre>kyoto:~/ $ proxychains nmap -v -Pn -sT 172.16.5.19                                                   
+            [proxychains] config file found: /etc/proxychains4.conf
+            [proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
+            [proxychains] DLL init: proxychains-ng 4.17
+            Host discovery disabled (-Pn). All addresses will be marked 'up' and scan times may be slower.
+            Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-09-23 19:19 EDT
+            Initiating Parallel DNS resolution of 1 host. at 19:19
+            Completed Parallel DNS resolution of 1 host. at 19:19, 0.05s elapsed
+            Initiating Connect Scan at 19:19
+            Scanning 172.16.5.19 [1000 ports]
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  127.0.0.1:9050 <--socket error or timeout!
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.19:443 <--socket error or timeout!
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.19:5900 <--socket error or timeout!
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.19:139  ...  OK
+            Discovered open port 139/tcp on 172.16.5.19
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.19:995 <--socket error or timeout!
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.19:80  ...  OK
+            Discovered open port 80/tcp on 172.16.5.19
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.19:25 <--socket error or timeout!
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.19:256 <--socket error or timeout!
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.19:111 <--socket error or timeout!
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.19:554 <--socket error or timeout!
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.19:1723 <--socket error or timeout!
+            Discovered open port 445/tcp on 172.16.5.19
+            [proxychains] Dynamic chain  ...  127.0.0.1:9050  ...  172.16.5.19:3389  ...  OK
+            Discovered open port 3389/tcp on 172.16.5.19
+            
+            <...> </pre>
+        <p>	O scan do Nmap mostra várias portas abertas, uma das quais é a porta de RDP (3389). 
+        </p>
+        <p>Dependendo do nível de acesso que temos a esse host durante o pentest, podemos tentar executar um exploit ou fazer login usando credenciais obtidas. Para este exemplo, vamos fazer login no host remoto Windows através do SOCKS tunnel. Isso pode ser feito usando o xfreerdp. O usuário no nosso caso é victor e a senha é pass@123.</p>
+        <pre>kyoto:~/ $ proxychains xfreerdp /v:172.16.5.19 /u:kyotozx /p:pass@123 </pre>
+        <img src="https://i.postimg.cc/QMnPG9vb/image.png" width="800">
+        <p>	Bom, foi isso. Tentei dar uma breve introdução sobre port forwarding e pivoting para que todos possam entender ;) 
+        </p>
+        <p>	Agradeço pelo tempinho que você dedicou para ler.</p>
+        <p>__________________________________________________________________________________________</p>
+        <h2>--- ( Referências ) ---</h2>
+        <p>https://academy.hackthebox.com/</p>
+        <p>https://simplificandoredes.com/como-fazer-portforwarding/</p>
+        <p>https://www.youtube.com/watch?v=bh61ngQzE_o
+        </p>
+        <p>https://book.hacktricks.xyz/generic-methodologies-and-resources/tunneling-and-port-forwarding</p>
+        <p>https://sumit-ghosh.com/posts/socks-proxy-ssh-tunneling-dynamic-port-forwarding/</p>
+        <p>OBS: Nos diagramas eu escrevi "forwading" em vez de forwaRding. Peço que releve esse erro ^^</p>
+        <p>__________________________________________________________________________________________</p>
+        <p>Discord: kyotozx</p>
+        <p>GitHub: kyotozx</p>
+        <p>Twitter: 0xkyotozx</p>
+        <p>HackTheBox: kyotozx</p>
+        <p>__________________________________________________________________________________________</p>
+
+    </main>
+</body>
+</html>
+
+
+
+
