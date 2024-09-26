@@ -65,7 +65,7 @@
             
             Nmap done: 1 IP address (1 host up) scanned in 0.43 seconds
             </pre>
-        <p>O NMAP nos mostrou que a porta SSH está aberta. Para acessar o MySQL, nós podemos acessar o servidor via SSH e acessar o MySQL por dentro ou podemos fazer um port forwading para nosso localhost na porta 1234 e acessar 	localmente. Um benefício de acessá-lo localmente é que por exemplo. se quisermos executar uma exploração remota no serviço MySQL, não poderíamos fazer sem o port forwading. Isso se deve ao fato do MySQL estar hospedado 	localmente no servidor  na porta 3306. Portanto, usaremos o comando abaixo para encaminhar nossa local port (1234) via SSH para o servidor:
+        <p>O NMAP nos mostrou que a porta SSH está aberta. Para acessar o MySQL, nós podemos acessar o servidor via SSH e acessar o MySQL por dentro ou podemos fazer um port forwading para nosso localhost na porta 1234 e acessar 	localmente. Um benefício de acessá-lo localmente é que se quisermos executar uma exploração remota no serviço MySQL, não poderíamos fazer sem o port forwading, por exemplo. Isso se deve ao fato do MySQL estar hospedado 	localmente no servidor  na porta 3306. Portanto, usaremos o comando abaixo para encaminhar nossa local port (1234) via SSH para o servidor:
         </p>
         <pre>kyoto:~/ $ ssh -L 1234:localhost:3306 ubuntu@10.129.202.64                                                                                                            
             The authenticity of host '10.129.202.64 (10.129.202.64)' can't be established.
@@ -252,7 +252,7 @@
             <...> </pre>
         <p>	O scan do Nmap mostra várias portas abertas, uma das quais é a porta de RDP (3389). 
         </p>
-        <p>Dependendo do nível de acesso que temos a esse host durante o pentest, podemos tentar executar um exploit ou fazer login usando credenciais obtidas. Para este exemplo, vamos fazer login no host remoto Windows através do SOCKS tunnel. Isso pode ser feito usando o xfreerdp. O usuário no nosso caso é victor e a senha é pass@123.</p>
+        <p>Dependendo do nível de acesso que temos a esse host durante o pentest, podemos tentar executar um exploit ou fazer login usando credenciais obtidas. Para este exemplo, vamos fazer login no host remoto Windows através do SOCKS tunnel. Isso pode ser feito usando o xfreerdp. O usuário no nosso caso é kyotozx e a senha é pass@123.</p>
         <pre>kyoto:~/ $ proxychains xfreerdp /v:172.16.5.19 /u:kyotozx /p:pass@123 </pre>
         <img src="https://i.postimg.cc/QMnPG9vb/image.png" width="800">
         <p>	Bom, foi isso. Tentei dar uma breve introdução sobre port forwarding e pivoting para que todos possam entender ;) 
